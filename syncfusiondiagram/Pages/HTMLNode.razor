@@ -1,0 +1,172 @@
+﻿@page "/HTMLNode"
+@using Syncfusion.EJ2.Blazor.Diagrams
+@using System.Collections.ObjectModel
+@using System.Data
+
+@inject ChartService chartservice
+
+<button class="btn btn-primary float-right" @onclick="DrawDiagramAsync">Start</button>
+@* Initialize Diagram with node template *@
+<EjsDiagram id="diagram" ModelType="@model" Width="100%" Height="350px" Nodes="@NodeCollection" Connectors="@ConnectorCollection" NodeDefaults="@NodeDefaults" ConnectorDefaults="@ConnectorDefaults" Layout="@LayoutValue">
+    <DiagramSnapSettings Constraints="@SnapConstraints.None"></DiagramSnapSettings>
+    <DiagramTemplates>
+        <NodeTemplate>
+            @{
+                <style>
+                    th {
+                        border: 5px solid #c1dad7
+                    }
+
+                    td {
+                        border: 5px solid #c1dad7
+                    }
+
+                    .c1 {
+                        background-color: #4b8c74
+                    }
+
+                    .c2 {
+                        background-color: #74c476
+                    }
+
+                    .c3 {
+                        background-color: #a4e56d
+                    }
+
+                    .c4 {
+                        background-color: #cffc83
+                    }
+                </style>
+
+                <table style="width:100%;">
+                    <tbody>
+                        <tr>
+
+                            <td class="c1"> @((context as Node).Annotations[2].Content) </td>
+
+                        </tr>
+                        <tr>
+
+                            <td class="c2"> @((context as Node).Annotations[0].Content) </td>
+
+                        </tr>
+                        <tr>
+
+                            <td class="c3"> @((context as Node).Annotations[1].Content) </td>
+                        </tr>
+
+                    </tbody>
+                </table>
+
+            }
+        </NodeTemplate>
+    </DiagramTemplates>
+</EjsDiagram>
+
+<style>
+    table, th, td {
+        border: 1px solid black;
+    }
+</style>
+@code{
+
+    DataTable tree;
+
+    ObservableCollection<DiagramNode> NodeCollection = new ObservableCollection<DiagramNode>();
+    ObservableCollection<DiagramConnector> ConnectorCollection = new ObservableCollection<DiagramConnector>();
+    public Type model = typeof(Node);
+    public class Node
+    {
+        public string Id { get; set; }
+        public ObservableCollection<DiagramNodeAnnotation> Annotations { get; set; }
+    }
+    DiagramLayout LayoutValue = new DiagramLayout()
+    {
+        //Sets layout type as HierarchicalTree...
+        Type = LayoutType.HierarchicalTree,
+        VerticalSpacing = 40,
+        HorizontalSpacing = 40,
+    };
+    DiagramNode NodeDefaults = new DiagramNode()
+    {
+        ExpandIcon = new NodeExpandIcon()
+        {
+            Height = 15,
+            Width = 15,
+            Shape = IconShapes.Minus,
+            Fill = "lightgray",
+            Offset = new IconOffset() { X = .5, Y = .85 },
+        },
+        //Initialize a collapse icon for the node
+        CollapseIcon = new NodeCollapseIcon()
+        {
+            Height = 15,
+            Width = 15,
+            Shape = IconShapes.Plus,
+            Offset = new IconOffset() { X = .5, Y = .85 },
+        },
+        Columns = 3,
+
+        Height = 70,
+        Width = 120,
+        //Initializing the default node's shape style
+        Style = new NodeShapeStyle() { Fill = "#357BD2", StrokeColor = "white" },
+        Annotations = new ObservableCollection<DiagramNodeAnnotation>()
+{
+            new DiagramNodeAnnotation() { Style = new AnnotationStyle() { Color = "white", Bold = true }, Offset=new NodeAnnotationOffset{ Y=0}},
+            new DiagramNodeAnnotation() { Style = new AnnotationStyle() { Color = "red", Bold = true },Offset=new NodeAnnotationOffset{ Y=0.3} },
+            new DiagramNodeAnnotation() { Style = new AnnotationStyle() { Color = "black", Bold = true },Offset=new NodeAnnotationOffset{ Y=0.6} },
+
+        }
+    };
+    DiagramConnector ConnectorDefaults = new DiagramConnector()
+    {
+        Type = Syncfusion.EJ2.Blazor.Diagrams.Segments.Orthogonal,
+        SourceDecorator = new ConnectorSourceDecorator() { Shape = DecoratorShapes.None },
+        TargetDecorator = new ConnectorTargetDecorator() { Shape = DecoratorShapes.None },
+        Style = new ConnectorShapeStyle() { StrokeColor = "#6d6d6d" },
+        CornerRadius = 5
+    };
+
+    protected override void OnInitialized()
+    {
+        //It just works but not correct if you activate this line!!!
+        //DrawDiagramAsync();
+    }
+    private async Task DrawDiagramAsync()
+    {
+
+
+        tree = chartservice.GetDashboardAsync().Result;
+
+
+        foreach (DataRow node in tree.Rows)
+        {
+
+            int nodeId = int.Parse(node["Id"].ToString());
+            var tempAnnotation = new ObservableCollection<DiagramNodeAnnotation>();
+            tempAnnotation.Add(new DiagramNodeAnnotation { Content = node["Id"].ToString() });
+            tempAnnotation.Add(new DiagramNodeAnnotation { Content = node["DataCount"].ToString() });
+            tempAnnotation.Add(new DiagramNodeAnnotation { Content = node["Titel"].ToString() });
+
+            //Just works if shape Parameter is removed!!!
+            NodeCollection.Add(new DiagramNode { Id = nodeId.ToString(), Annotations = tempAnnotation, Shape=new DiagramShape()
+            {
+                Type=Shapes.HTML,
+            }  });
+            
+            //NodeCollection.Add(new DiagramNode { Id = nodeId.ToString(), Annotations = tempAnnotation });
+
+            if (nodeId == (int)node["ParentId"])
+                continue;
+            var connector = new DiagramConnector() { Id = "connector" + nodeId.ToString(), SourceID = node["ParentId"].ToString(), TargetID = nodeId.ToString() };
+            ConnectorCollection.Add(connector);
+
+        }
+        StateHasChanged();
+
+
+    }
+
+
+}
